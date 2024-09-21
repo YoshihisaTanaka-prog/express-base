@@ -1,6 +1,6 @@
 "use strict";
 
-const getType = function(object, isStrict=false){
+const getType = function(object){
   const getRoughType = (object)=>{
     return Object.prototype.toString.call(object).split(" ")[1].slice(0, -1).toLowerCase();
   }
@@ -20,48 +20,9 @@ const getType = function(object, isStrict=false){
   const type = getRoughType(object);
   switch(type){
     case "object":
-      const className = getClassName(object);
-      if(isStrict && className == "object"){
-        const keys = Object.keys(object).sort();
-        return "object[" + keys.map( (key) => key + ": " + getType(object[key], true) ).join(", ") + "]";
-      }
-      return className;
+      return getClassName(object);
     case "array":
-      if(isStrict){
-        let typeList = [];
-        for(const element of object){
-          const elementType = getType(element, true);
-          if(!typeList.includes(elementType)){
-            typeList.push(elementType);
-          }
-        }
-        typeList.sort();
-        const normalList = [];
-        const arrayList = [];
-        const objectList = [];
-        for(const type of typeList){
-          if(type.startsWith("array")){
-            arrayList.push(type);
-          } else if(type.startsWith("object")){
-            objectList.push(type);
-          } else {
-            normalList.push(type);
-          }
-        }
-        typeList = [];
-        for(const type of normalList){
-          typeList.push(type);
-        }
-        for(const type of arrayList){
-          typeList.push(type);
-        }
-        for(const type of objectList){
-          typeList.push(type);
-        }
-        return "array[" + typeList.join(" | ") + "]";
-      } else{
-        return "array";
-      }
+      return "array";
     case "function":
       const objectCode = object.toString();
       if(objectCode.startsWith("class")){
@@ -149,7 +110,7 @@ const isSameObject = function(object1, object2, ignoreArrayOrder=false){
         if(["null", "undefined", "boolean", "number", "bigint", "string", "date"].includes(type)){
           return object1 == object2;
         } else if(type.includes("-")){
-          return true;
+          return true
         } else {
           return isSameObject(JSON.parse(JSON.stringify(object1)), JSON.parse(JSON.stringify(object2)), ignoreArrayOrder);
         }
