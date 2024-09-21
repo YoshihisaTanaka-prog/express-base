@@ -148,6 +148,8 @@ const isSameObject = function(object1, object2, ignoreArrayOrder=false){
       default:
         if(["null", "undefined", "boolean", "number", "bigint", "string", "date"].includes(type)){
           return object1 == object2;
+        } else if(type.includes("-")){
+          return true;
         } else {
           return isSameObject(JSON.parse(JSON.stringify(object1)), JSON.parse(JSON.stringify(object2)), ignoreArrayOrder);
         }
