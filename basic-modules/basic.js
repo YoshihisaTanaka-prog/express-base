@@ -21,8 +21,6 @@ const getType = function(object){
   switch(type){
     case "object":
       return getClassName(object);
-    case "array":
-      return "array";
     case "function":
       const objectCode = object.toString();
       if(objectCode.startsWith("class")){
