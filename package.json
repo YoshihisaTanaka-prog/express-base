@@ -1,0 +1,12 @@
+{
+  "name": "gas-supporter",
+  "version": "0.0.1",
+  "description": "beta version",
+  "main": "index.js",
+  "scripts": {},
+  "author": "Yohihisa Tanaka",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
