@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const { SeparateCommand } = require("./basic-modules/exec");
+const Command = require("./basic-modules/exec")();
 const f = require("./basic-modules/file");
 const { read, isExists, isFile } = f([ 'css', 'html', 'js', 'json', 'txt' ]);
 
