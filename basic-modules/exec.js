@@ -1,130 +1,70 @@
 "use strict";
 
 const { spawn, execSync } = require('child_process');
-const { isatty } = require('tty');
+const { writeFileSync } = require('fs');
 
-const obj = {
-  outputData: [],
-  outputUnit: {command: "", results: []},
-  funcUnit: function(command, params){
-    const self = this;
-    const childProcess = spawn(command, params);
-    self.outputUnit = {command: command + " " + params.map( (p) => p.includes(" ") ? '"' + p + '"' : p ).join(" "), results: []};
-    childProcess.stdout.on('data', function(chunk){
-      console.log(chunk.toString());
-      for(const line of chunk.toString().split("\n").map( (l) => l.replaceAll("\r", "").replaceAll("\t", "    ") )){
-        self.outputUnit.results.push(line);
-      }
-    });
-    childProcess.stdout.on("close", function(){
-      self.outputData.push(self.outputUnit);
-      if(self.formattedCommands.length == 0){
-        if(self.onClose){
-          self.onClose(self.outputData);
-        }
-      } else{
-        const unit = self.formattedCommands.shift();
-        self.funcUnit(unit.command, unit.params);
-      }
-    });
-  },
-  formatCommand: function(command){
-    let status = 0;
-    let cachedParam = "";
-    const unit = {command: "", params: []};
-    for(const char of command){
-      switch (status) {
-        case 0:
-          if("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_".includes(char)){
-            unit.command += char;
-            status = 1;
+module.exports = function(characterEncodingIdentifier=65001){
+
+  const runningSpawnObject = {
+    resultData: {success: {resultLine: [], resultText: ""}, error: {resultLine: [], resultText: ""}},
+    mainFunction: function(command){
+      writeFileSync("nwaps.cmd", "@echo off\n\nchcp " + characterEncodingIdentifier + " & " + command);
+      const self = this;
+      return new Promise((resolve, reject) => {
+        const proc = spawn('nwaps.cmd', []);
+        proc.stdout.on('data', (data) => {
+          console.log(data.toString());
+          self.resultData.success.resultText += data.toString().replaceAll("\r", "").replaceAll("\t", "    ");
+          for(const line of data.toString().split("\n")){
+            self.resultData.success.resultLine.push(line.replaceAll("\r", "").replaceAll("\t", "    "));
           }
-          break;
-        case 1:
-          if(char == " "){
-            status = 2;
-          } else if(char == "&"){
-            this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
-            status = 0;
-            unit.command = "";
-            unit.params = [];
-          } else{
-            unit.command += char;
+        });
+        proc.stderr.on('data', (err) => {
+          console.log(err.toString());
+          self.resultData.error.resultText += err.toString().replaceAll("\r", "").replaceAll("\t", "    ");
+          for(const line of err.toString().split("\n")){
+            self.resultData.error.resultLine.push(line.replaceAll("\r", "").replaceAll("\t", "    "));
           }
-          break;
-        case 2:
-          if(char == " "){
-            if(cachedParam != ""){
-              unit.params.push(cachedParam);
-              cachedParam = "";
-            }
-          } else if(char == "&"){
-            this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
-            status = 0;
-            unit.command = "";
-            unit.params = [];
-          } else if(char == '"'){
-            status = 3;
-            if(unit.command == "echo"){
-              cachedParam += '"';
-            }
-          } else{
-            cachedParam += char;
-          }
-          break;
-        case 3:
-          if(char == '"'){
-            status = 2;
-            if(unit.command == "echo"){
-              cachedParam += '"';
-            }
-          } else {
-            cachedParam += char
-          }
-          break;
-        default:
-          break;
-      }
+        })
+        proc.stdout.on("close", (code) =>{
+          resolve(self.resultData);
+        })
+      })
     }
-    unit.params.push(cachedParam);
-    this.formattedCommands.push({command: Object.freeze(unit.command), params: Object.freeze(unit.params)});
-  },
-  formattedCommands: [],
-  mainFunc: function(command="", onClose){
-    this.onClose = onClose;
-    this.formatCommand(command);
-    const unit = this.formattedCommands.shift();
-    this.funcUnit(unit.command, unit.params);
+  };
+
+  const runSpawn = function(command={}){
+    return runningSpawnObject.mainFunction(command[process.platform]);
+  };
+
+  const runExec = function(command={}, isArrayType=true){
+    const resultText = execSync(command[process.platform]).toString();
+    if(isArrayType){
+      return resultText.split("\n").map( (line) => line.replaceAll("\r", "") );
+    } else {
+      return resultText;
+    }
   }
+
+  class Command {
+    constructor(windows="", mac="", linux=""){
+      this.win32 = windows;
+      this.darwin = mac;
+      this.linux = linux;
+    }
+    runS(){
+      return runSpawn(this);
+    }
+    runE(isArrayType=true){
+      return runExec(this, isArrayType);
+    }
+    static set(windows="", mac="", linux=""){
+      return new Command(windows, mac, linux);
+    }
+    static setAll(command=""){
+      return new Command(command, command, command);
+    }
+  }
+
+  return Command;
 }
-
-const runSpawn = function(command={}, onClose=()=>{}){
-  obj.mainFunc(command[process.platform], onClose);
-};
-
-const runExec = function(command={}, isArrayType=true){
-  const resultText = execSync(command[process.platform]).toString();
-  if(isArrayType){
-    return resultText.split("\n").map( (line) => line.replaceAll("\r", "") );
-  } else {
-    return resultText;
-  }
-}
-
-class SeparateCommand {
-  constructor(windows="", mac="", linux=""){
-    this.win32 = windows;
-    this.darwin = mac;
-    this.linux = linux;
-  }
-  runS(onClose=()=>{}){
-    runSpawn(this, onClose);
-  }
-  runE(isArrayType=true){
-    runExec(this, isArrayType);
-  }
-}
-
-
-
-module.exports = { SeparateCommand };
