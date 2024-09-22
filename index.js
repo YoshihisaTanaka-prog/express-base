@@ -4,7 +4,7 @@ const { SeparateCommand } = require("./basic-modules/exec");
 const f = require("./basic-modules/file");
 const { read, isExists, isFile } = f([ 'css', 'html', 'js', 'json', 'txt' ]);
 
-const appName = "GAS-Supporter";
+const appName = "Input Your App Name.";
 
 const app = express();
 
