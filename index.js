@@ -13,12 +13,11 @@ const server = app.listen(0, function(){
 });
 
 setTimeout(() => {
-  const command = new SeparateCommand(
+  Command.set(
     "start chrome.exe http://localhost:" + server.address().port,
     "open -a 'Google Chrome' 'http://localhost:'" + server.address().port,
     "echo if you want to visit your web site, open http://localhost:" + server.address().port
-  );
-  command.runE();
+  ).runE();
 }, 500);
 
 app.get("/", async function(req, res){
@@ -26,7 +25,7 @@ app.get("/", async function(req, res){
 });
 
 app.get("*", async function(req, res){
-  if(isExists("html" + req.path)){
+  if(await isFile("html" + req.path)){
     res.sendFile(__dirname + "\\html" + req.path.replaceAll("/", "\\"));
   } else {
     res.send((await read("html/404.html")).replace("<title></title>", "<title>" + appName + "：お探しのページが見つかりません。</title>"));
